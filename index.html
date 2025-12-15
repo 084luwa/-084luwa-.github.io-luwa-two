@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>抽小主人（按鈕版・穩定修正版）</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      gap: 30px;
+      padding: 30px;
+    }
+    .panel {
+      border: 1px solid #444;
+      padding: 20px;
+      border-radius: 8px;
+      width: 340px;
+    }
+    textarea, input, button {
+      width: 100%;
+      margin: 6px 0;
+      padding: 8px;
+      font-size: 15px;
+    }
+    button { cursor: pointer; }
+    .name-btn {
+      width: auto;
+      margin: 4px;
+      padding: 6px 10px;
+    }
+    .result { font-size: 20px; margin-top: 10px; }
+    .small { font-size: 13px; opacity: 0.8; }
+  </style>
+</head>
+<body>
+
+<!-- 抽籤區 -->
+<div class="panel">
+  <h2>🎯 抽小主人</h2>
+
+  <p>① 輸入全部名單（一行一個）</p>
+  <textarea id="list" rows="6" placeholder="小明\n小華\n小美"></textarea>
+
+  <button onclick="init()">✅ 產生抽籤按鈕</button>
+
+  <p>② 點選「現在是誰要抽」</p>
+  <div id="buttons"></div>
+
+  <div id="drawResult" class="result"></div>
+  <button id="hideBtn" onclick="hideResult()" style="display:none">🙈 隱藏結果</button>
+  <div id="remain" class="small"></div>
+</div>
+
+<!-- 查詢區 -->
+<div class="panel">
+  <h2>📒 查詢紀錄</h2>
+  <p>輸入名字查看你抽到誰</p>
+  <input id="queryName" />
+  <button onclick="query()">查詢</button>
+  <div id="queryResult" class="result"></div>
+</div>
+
+<script>
+  let allPeople = [];
+  let remaining = [];
+  let records = {};
+
+  // ===== localStorage =====
+  function saveData() {
+    localStorage.setItem("allPeople", JSON.stringify(allPeople));
+    localStorage.setItem("remaining", JSON.stringify(remaining));
+    localStorage.setItem("records", JSON.stringify(records));
+  }
+
+  function loadData() {
+    const ap = localStorage.getItem("allPeople");
+    const rm = localStorage.getItem("remaining");
+    const rc = localStorage.getItem("records");
+    if (ap && rm && rc) {
+      allPeople = JSON.parse(ap);
+      remaining = JSON.parse(rm);
+      records = JSON.parse(rc);
+      renderButtons();
+      updateRemain();
+    }
+  }
+
+  loadData();
+
+  // 初始化並產生按鈕
+  function init() {
+    const text = document.getElementById("list").value.trim();
+    if (!text) {
+      alert("請先輸入名單");
+      return;
+    }
+    allPeople = text.split("\n").map(n => n.trim()).filter(n => n);
+    remaining = [...allPeople];
+    records = {};
+    renderButtons();
+    updateRemain();
+    saveData();
+  }
+
+  function renderButtons() {
+    const box = document.getElementById("buttons");
+    box.innerHTML = "";
+
+    allPeople.forEach(name => {
+      const btn = document.createElement("button");
+      btn.innerText = name;
+      btn.className = "name-btn";
+      btn.disabled = !!records[name]; // 抽過就不能再抽
+      btn.onclick = () => draw(name);
+      box.appendChild(btn);
+    });
+  }
+
+  function draw(me) {
+    if (records[me]) return;
+
+    let available = remaining.filter(p => p !== me);
+    if (available.length === 0) {
+      document.getElementById("drawResult").innerText = "已經沒有可以抽的人了";
+      return;
+    }
+
+    const chosen = available[Math.floor(Math.random() * available.length)];
+
+    records[me] = chosen;
+    remaining = remaining.filter(p => p !== chosen);
+
+    document.getElementById("drawResult").innerText = `🎉 ${me} 抽到的是：${chosen}`;
+    document.getElementById("hideBtn").style.display = "block";
+
+    renderButtons();
+    updateRemain();
+    saveData();
+  }
+
+  function hideResult() {
+    document.getElementById("drawResult").innerText = "✅ 已抽完（結果已隱藏）";
+    document.getElementById("hideBtn").style.display = "none";
+  }
+
+  function updateRemain() {
+    document.getElementById("remain").innerText = `剩餘可被抽人數：${remaining.length}`;
+  }
+
+  function query() {
+    const name = document.getElementById("queryName").value.trim();
+    if (records[name]) {
+      document.getElementById("queryResult").innerText = `${name} 抽到的是：${records[name]}`;
+    } else {
+      document.getElementById("queryResult").innerText = "查無紀錄";
+    }
+  }
+</script>
+
+</body>
+</html>
